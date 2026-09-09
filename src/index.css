@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0B1420;
+  --panel: #0F1B29;
+  --panel-alt: #16283A;
+  --border: #22374A;
+
+  --text-primary: #EAF1F7;
+  --text-muted: #7F93A6;
+
+  --accent-fire: #FF7A45;      /* Wildfires */
+  --accent-water: #3FC7C0;     /* Floods */
+  --accent-storm: #C9A8FF;     /* Severe Storms */
+  --accent-quake: #FFD166;     /* Earthquakes */
+  --accent-volcano: #FF5D5D;   /* Volcanoes */
+  --accent-other: #8CA0B3;     /* Everything else */
+
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg);
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Pulsing radar dot */
+@keyframes pulse-dot {
+  0% { box-shadow: 0 0 0 0 rgba(255, 122, 69, 0.65); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 122, 69, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 122, 69, 0); }
+}
+
+.live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-fire);
+  box-shadow: 0 0 0 0 rgba(255, 122, 69, 0.6);
+  animation: pulse-dot 2s infinite;
+}
+
+/* Radar scan bar */
+@keyframes scan {
+  0% { left: -30%; }
+  100% { left: 100%; }
+}
+
+.map-scan {
+  position: absolute;
+  top: 0;
+  left: -30%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(63, 199, 192, 0.08), transparent);
+  animation: scan 6s linear infinite;
+  pointer-events: none;
+}
+
+/* Leaflet marker animations */
+.event-marker {
+  position: relative;
+  width: 16px;
+  height: 16px;
+}
+
+.event-marker .core {
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--dot-color, #3FC7C0);
+  box-shadow: 0 0 6px var(--dot-color, #3FC7C0);
+}
+
+.event-marker .ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--dot-color, #3FC7C0);
+  animation: ring-pulse 2.2s ease-out infinite;
+}
+
+@keyframes ring-pulse {
+  0% { transform: scale(0.4); opacity: 0.95; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+/* Leaflet dark theme override */
+.leaflet-container {
+  background: #0B1420 !important;
+  font-family: var(--font-body);
+}
+
+.leaflet-popup-content-wrapper {
+  background: #16283A !important;
+  color: #EAF1F7 !important;
+  border: 1px solid #22374A !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+}
+
+.leaflet-popup-tip {
+  background: #16283A !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+  font-size: 0.82rem !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  color: #7F93A6 !important;
+  padding: 4px 6px !important;
+}
+
+/* Custom smooth dark scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0F1B29;
+}
+::-webkit-scrollbar-thumb {
+  background: #22374A;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3FC7C0;
+}
+

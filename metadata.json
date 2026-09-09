@@ -1,0 +1,7 @@
+{
+  "name": "RakshaNet - Real-Time Disaster Aggregator",
+  "description": "Real-time disaster information aggregation platform for SIH (SIH1687) integrating NASA EONET and USGS feeds with interactive geo-mapping, tactical feeds, and team sharing.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
