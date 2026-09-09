@@ -14,14 +14,14 @@ interface DisasterMapProps {
 
 const TILE_SERVERS = {
   dark: {
-    name: 'Tactical Dark',
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    name: 'English Street Map',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri',
   },
   voyager: {
     name: 'Clean Light',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri',
   },
   satellite: {
     name: 'Topographic Terrain',
@@ -39,7 +39,7 @@ export default function DisasterMap({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
-  const [activeTileKey, setActiveTileKey] = useState<keyof typeof TILE_SERVERS>('dark');
+  const [activeTileKey, setActiveTileKey] = useState<keyof typeof TILE_SERVERS>('voyager');
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 

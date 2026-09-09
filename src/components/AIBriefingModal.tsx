@@ -74,7 +74,6 @@ ${report.evacuationOrPreparednessTips.map((t, i) => `• ${t}`).join('\n')}
                   <Sparkles className="w-3 h-3" />
                   <span>AI SITUATION SYNTHESIS</span>
                 </span>
-                <span className="text-xs font-mono text-slate-400">Gemini Powered</span>
               </div>
               <h2 className="text-base font-display font-bold text-white mt-0.5">
                 Executive Disaster Briefing
