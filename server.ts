@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import os from 'os';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
@@ -9,7 +10,8 @@ import { fallbackDisasterEvents } from './server/fallbackEvents.js';
 import { DisasterEvent, EventsApiResponse, SystemHealth } from './src/types.js';
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
+const HOST = '0.0.0.0';
 const serverStartTime = Date.now();
 
 app.use(cors());
@@ -266,8 +268,14 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[RakshaNet] Server running on http://0.0.0.0:${PORT}`);
+  app.listen(PORT, HOST, () => {
+    const networkAddresses = Object.values(os.networkInterfaces())
+      .flat()
+      .filter((address): address is os.NetworkInterfaceInfo => Boolean(address) && address.family === 'IPv4' && !address.internal)
+      .map((address) => `http://${address.address}:${PORT}`);
+
+    console.log(`[RakshaNet] Local:   http://localhost:${PORT}`);
+    networkAddresses.forEach((address) => console.log(`[RakshaNet] Network: ${address}`));
   });
 }
 
