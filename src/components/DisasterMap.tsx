@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from 'react';
 import L from 'leaflet';
 import { DisasterEvent } from '../types';
 import { colorFor } from '../utils/colors';
 import { timeAgo } from '../utils/time';
-import { Layers, Compass, Globe, MapPin, Maximize2, Search, ShieldAlert } from 'lucide-react';
+import { Layers, Compass, Globe, MapPin, Maximize2, Search, ShieldAlert, X as XIcon } from 'lucide-react';
 
 interface DisasterMapProps {
   events: DisasterEvent[];
@@ -36,6 +36,7 @@ export default function DisasterMap({
   onSelectEvent,
 }: DisasterMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapSurfaceRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const satelliteLabelsLayerRef = useRef<L.TileLayer | null>(null);
@@ -45,8 +46,63 @@ export default function DisasterMap({
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchControlRef = useRef<HTMLDivElement | null>(null);
+  const searchDragRef = useRef({ active: false, moved: false, offsetX: 0, offsetY: 0 });
+  const [searchPosition, setSearchPosition] = useState<{ left: number; top: number } | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchMessage, setSearchMessage] = useState('');
+
+  useEffect(() => {
+    if (isSearchOpen) searchInputRef.current?.focus();
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!searchDragRef.current.active || !mapSurfaceRef.current || !searchControlRef.current) return;
+      const surfaceRect = mapSurfaceRef.current.getBoundingClientRect();
+      const controlRect = searchControlRef.current.getBoundingClientRect();
+      const nextLeft = event.clientX - surfaceRect.left - searchDragRef.current.offsetX;
+      const nextTop = event.clientY - surfaceRect.top - searchDragRef.current.offsetY;
+
+      if (Math.abs(event.movementX) > 1 || Math.abs(event.movementY) > 1) {
+        searchDragRef.current.moved = true;
+      }
+
+      setSearchPosition({
+        left: Math.max(8, Math.min(nextLeft, surfaceRect.width - controlRect.width - 8)),
+        top: Math.max(8, Math.min(nextTop, surfaceRect.height - controlRect.height - 8)),
+      });
+    };
+
+    const handlePointerUp = () => {
+      searchDragRef.current.active = false;
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, []);
+
+  const handleSearchDragStart = (event: PointerEvent<HTMLDivElement>) => {
+    if (!mapSurfaceRef.current || !searchControlRef.current) return;
+    const surfaceRect = mapSurfaceRef.current.getBoundingClientRect();
+    const controlRect = searchControlRef.current.getBoundingClientRect();
+    searchDragRef.current = {
+      active: true,
+      moved: false,
+      offsetX: event.clientX - controlRect.left,
+      offsetY: event.clientY - controlRect.top,
+    };
+    setSearchPosition({
+      left: controlRect.left - surfaceRect.left,
+      top: controlRect.top - surfaceRect.top,
+    });
+  };
 
   // Initialize Map
   useEffect(() => {
@@ -257,7 +313,7 @@ export default function DisasterMap({
   };
 
   return (
-    <div className="relative w-full h-full min-h-[400px] flex-1 bg-[#0B1420] overflow-hidden">
+    <div ref={mapSurfaceRef} className="relative w-full h-full min-h-[400px] flex-1 bg-[#0B1420] overflow-hidden">
       {/* Map DOM Container */}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
@@ -265,31 +321,75 @@ export default function DisasterMap({
       <div className="map-scan" aria-hidden="true" />
 
       {/* Place search */}
-      <form
-        onSubmit={handlePlaceSearch}
-        className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] flex w-[min(360px,calc(100%-2rem))] items-center gap-2 rounded-md border border-cyan-500/40 bg-[#0F1B29]/95 p-1.5 shadow-lg backdrop-blur-sm"
-      >
-        <Search className="ml-1 w-4 h-4 shrink-0 text-cyan-400" />
-        <input
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search a place..."
-          aria-label="Search for a place"
-          className="min-w-0 flex-1 bg-transparent px-1 py-1 text-xs text-white outline-none placeholder:text-slate-500"
-        />
-        <button
-          type="submit"
-          disabled={isSearching || !searchQuery.trim()}
-          className="rounded bg-cyan-600/80 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+      {!isSearchOpen ? (
+        <div
+          ref={searchControlRef}
+          className="absolute z-[400]"
+          style={searchPosition ? { left: searchPosition.left, top: searchPosition.top } : { left: 16, top: '50%', transform: 'translateY(-50%)' }}
         >
-          {isSearching ? '...' : 'Find'}
-        </button>
-        {searchMessage && (
-          <span className="absolute left-0 top-full mt-1 max-w-full truncate rounded bg-[#0F1B29]/95 px-2 py-1 text-[10px] text-slate-300 shadow">
-            {searchMessage}
-          </span>
-        )}
-      </form>
+          <button
+            type="button"
+            onPointerDown={handleSearchDragStart}
+            onClick={() => {
+              if (!searchDragRef.current.moved) setIsSearchOpen(true);
+              searchDragRef.current.moved = false;
+            }}
+            aria-label="Open place search"
+            title="Search a place. Drag to reposition."
+            className="rounded-md border border-cyan-500/40 bg-[#0F1B29]/95 p-2.5 text-cyan-400 shadow-lg backdrop-blur-sm transition hover:bg-[#16283A] touch-none"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+        </div>
+      ) : (
+        <div
+          ref={searchControlRef}
+          className="absolute z-[400]"
+          style={searchPosition ? { left: searchPosition.left, top: searchPosition.top } : { left: 16, top: '50%', transform: 'translateY(-50%)' }}
+        >
+          <form
+            onSubmit={handlePlaceSearch}
+            className="flex w-[min(300px,calc(100vw-2rem))] items-center gap-2 rounded-md border border-cyan-500/40 bg-[#0F1B29]/95 p-1.5 shadow-lg backdrop-blur-sm"
+          >
+            <div
+              onPointerDown={handleSearchDragStart}
+              title="Drag to reposition search"
+              className="flex shrink-0 cursor-move touch-none"
+            >
+              <Search className="ml-1 w-4 h-4 text-cyan-400" />
+            </div>
+            <input
+              ref={searchInputRef}
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search a place..."
+              aria-label="Search for a place"
+              className="min-w-0 flex-1 bg-transparent px-1 py-1 text-xs text-white outline-none placeholder:text-slate-500"
+            />
+            <button
+              type="submit"
+              disabled={isSearching || !searchQuery.trim()}
+              className="rounded bg-cyan-600/80 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSearching ? '...' : 'Find'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(false)}
+              aria-label="Close place search"
+              title="Close search"
+              className="rounded p-1 text-slate-400 transition hover:bg-[#16283A] hover:text-white"
+            >
+              <XIcon className="w-4 h-4" />
+            </button>
+            {searchMessage && (
+              <span className="absolute left-0 top-full mt-1 max-w-full truncate rounded bg-[#0F1B29]/95 px-2 py-1 text-[10px] text-slate-300 shadow">
+                {searchMessage}
+              </span>
+            )}
+          </form>
+        </div>
+      )}
 
       {/* Quick Viewport Navigation Toolbar */}
       <div className="absolute top-4 left-4 z-[400] flex flex-wrap gap-2">

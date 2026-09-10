@@ -42,6 +42,12 @@ export default function App() {
   // Mobile view toggle ('map' | 'feed')
   const [mobileTab, setMobileTab] = useState<'map' | 'feed'>('map');
 
+  const showNotificationFor = useCallback((event: DisasterEvent) => {
+    setNotificationEvent(event);
+    if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
+    notificationTimeoutRef.current = setTimeout(() => setNotificationEvent(null), 8000);
+  }, []);
+
   // Fetch events from server
   const loadEvents = useCallback(async (force = false) => {
     if (force) setIsRefreshing(true);
@@ -52,23 +58,28 @@ export default function App() {
 
       if (data.ok && Array.isArray(data.events)) {
         const knownEventIds = knownEventIdsRef.current;
-        if (knownEventIds) {
-          const newEvent = data.events.find((event) => !knownEventIds.has(event.id));
-          if (newEvent) {
-            setNotificationEvent(newEvent);
-            if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
-            notificationTimeoutRef.current = setTimeout(() => setNotificationEvent(null), 8000);
-          }
+        const nextEvents = data.events;
+
+        if (!knownEventIds && nextEvents.length > 0) {
+          const demoEvent: DisasterEvent = {
+            ...nextEvents[0],
+            title: `Emergency alert: ${nextEvents[0].title}`,
+          };
+          showNotificationFor(demoEvent);
+        } else if (knownEventIds) {
+          const newEvent = nextEvents.find((event) => !knownEventIds.has(event.id));
+          if (newEvent) showNotificationFor(newEvent);
         }
-        knownEventIdsRef.current = new Set(data.events.map((event) => event.id));
-        setAllEvents(data.events);
+
+        knownEventIdsRef.current = new Set(nextEvents.map((event) => event.id));
+        setAllEvents(nextEvents);
         setUpdatedAt(data.updatedAt || Date.now());
         setIsCached(Boolean(data.cached));
         if (data.sources) setSources(data.sources);
 
         // If no event selected yet, default to first critical or first event
-        if (!selectedEvent && data.events.length > 0) {
-          const firstCritical = data.events.find((e) => e.severityLevel === 'critical') || data.events[0];
+        if (!selectedEvent && nextEvents.length > 0) {
+          const firstCritical = nextEvents.find((e) => e.severityLevel === 'critical') || nextEvents[0];
           setSelectedEvent(firstCritical);
         }
       }
@@ -78,7 +89,7 @@ export default function App() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [selectedEvent]);
+  }, [selectedEvent, showNotificationFor]);
 
   // Initial load and periodic 5-minute refresh
   useEffect(() => {

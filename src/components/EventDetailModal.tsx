@@ -22,43 +22,86 @@ export default function EventDetailModal({
   const severity = getSeverityBadge(event.severityLevel);
 
   const getEmergencyActionList = (category: string) => {
-    switch (category.toLowerCase()) {
-      case 'earthquakes':
+    const normalizedCategory = category.toLowerCase();
+
+    if (normalizedCategory.includes('earthquake')) {
         return [
           'Drop, Cover, and Hold On beneath sturdy furniture or interior walls.',
           'Shut off gas lines and electrical mains if structural compromise is detected.',
           'Expect seismic aftershocks; avoid damaged buildings and unreinforced masonry.',
           'Activate local Aapda Mitra volunteers and check on senior citizens / vulnerable individuals.',
         ];
-      case 'floods':
+    }
+    if (normalizedCategory.includes('flood')) {
         return [
           'Move immediately to designated high ground or evacuation shelters.',
           'Never attempt to drive or walk through flood waters (Turn Around, Don\'t Drown).',
           'Disconnect electrical appliances to prevent short circuits and electrocution.',
           'Coordinate relief boats and water filtration kits with district administration.',
         ];
-      case 'severe storms':
-      case 'cyclones':
+    }
+    if (normalizedCategory.includes('storm') || normalizedCategory.includes('cyclone')) {
         return [
           'Secure loose roof sheets, solar panels, and external equipment.',
           'Prepare emergency GO-bag with torch, battery radio, water, and first aid.',
           'Stay indoors away from windows; keep satellite phones or ham radio ready.',
           'Monitor IMD / NDRF coastal radar bulletins every 3 hours.',
         ];
-      case 'wildfires':
+    }
+    if (normalizedCategory.includes('wildfire') || normalizedCategory.includes('fire')) {
         return [
           'Evacuate immediately upon local authority broadcast; close all doors & vents.',
           'Wear N95 or P100 masks to filter dangerous particulate matter (PM2.5).',
           'Establish firebreaks and buffer zones around residential clusters.',
           'Keep livestock and pets in pre-cleared containment pastures.',
         ];
-      default:
+    }
+    if (normalizedCategory.includes('volcano')) {
         return [
-          'Maintain situational awareness through regional disaster management channels.',
-          'Verify official bulletins before forwarding emergency advisories.',
-          'Keep emergency communication devices fully charged.',
+          'Follow the official exclusion zone and evacuate before ash, lava, or lahars reach the area.',
+          'Wear goggles and a well-fitted N95 mask; keep doors, windows, and ventilation closed during ashfall.',
+          'Avoid river valleys and channels that may carry fast-moving volcanic mudflows.',
+          'Store drinking water and protect tanks, machinery, and livestock from ash contamination.',
         ];
     }
+    if (normalizedCategory.includes('landslide')) {
+        return [
+          'Move away from slopes, cliffs, retaining walls, and the path of falling debris immediately.',
+          'Do not cross active slides, unstable ground, or flooded channels on foot or by vehicle.',
+          'Watch for new cracks, leaning trees, blocked drains, and unusual rumbling as warning signs.',
+          'Report trapped people and damaged roads to local emergency services without entering the slide area.',
+        ];
+    }
+    if (normalizedCategory.includes('drought') || normalizedCategory.includes('water')) {
+        return [
+          'Follow local water restrictions and store only the emergency supply advised by authorities.',
+          'Use treated or verified drinking water and report suspected contamination immediately.',
+          'Prioritize drinking water, sanitation, children, older adults, and livestock during shortages.',
+          'Avoid outdoor burning and conserve power where heat or water infrastructure is under strain.',
+        ];
+    }
+    if (normalizedCategory.includes('dust') || normalizedCategory.includes('haze')) {
+        return [
+          'Stay indoors when possible and keep windows, doors, and outside-air vents closed.',
+          'Wear a well-fitted N95 mask outdoors; cloth masks do not reliably filter fine particles.',
+          'Limit strenuous activity and monitor breathing symptoms, especially for people with asthma.',
+          'Use official air-quality advisories before deciding to travel or reopen schools and workplaces.',
+        ];
+    }
+    if (normalizedCategory.includes('snow') || normalizedCategory.includes('ice') || normalizedCategory.includes('temperature')) {
+        return [
+          'Avoid unnecessary travel and carry warm layers, water, food, a torch, and a charged phone.',
+          'Keep heating equipment ventilated and never use charcoal, generators, or fuel appliances indoors.',
+          'Protect exposed pipes, check vulnerable neighbours, and bring pets and livestock into shelter.',
+          'Follow road closures and seek medical help for confusion, severe shivering, or cold-related injury.',
+        ];
+    }
+    return [
+          'Follow evacuation, shelter, and movement instructions from local authorities for the affected area.',
+          'Keep an emergency kit ready with water, food, first aid, medicines, a torch, and a power bank.',
+          'Avoid damaged infrastructure, contaminated water, and restricted zones around the incident.',
+          'Verify official bulletins before forwarding alerts and report people needing urgent assistance.',
+        ];
   };
 
   const handleCopyTelemetry = () => {
