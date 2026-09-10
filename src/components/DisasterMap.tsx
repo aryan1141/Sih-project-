@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import L from 'leaflet';
 import { DisasterEvent } from '../types';
 import { colorFor } from '../utils/colors';
 import { timeAgo } from '../utils/time';
-import { Layers, Compass, Globe, MapPin, Maximize2, ShieldAlert } from 'lucide-react';
+import { Layers, Compass, Globe, MapPin, Maximize2, Search, ShieldAlert } from 'lucide-react';
 
 interface DisasterMapProps {
   events: DisasterEvent[];
@@ -24,9 +24,9 @@ const TILE_SERVERS = {
     attribution: 'Tiles &copy; Esri',
   },
   satellite: {
-    name: 'Topographic Terrain',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+    name: 'Satellite Imagery',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri',
   },
 };
 
@@ -38,10 +38,15 @@ export default function DisasterMap({
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const satelliteLabelsLayerRef = useRef<L.TileLayer | null>(null);
   const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
+  const searchMarkerRef = useRef<L.CircleMarker | null>(null);
   const [activeTileKey, setActiveTileKey] = useState<keyof typeof TILE_SERVERS>('dark');
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchMessage, setSearchMessage] = useState('');
 
   // Initialize Map
   useEffect(() => {
@@ -77,6 +82,21 @@ export default function DisasterMap({
     if (!mapInstanceRef.current || !tileLayerRef.current) return;
     const tileConfig = TILE_SERVERS[activeTileKey];
     tileLayerRef.current.setUrl(tileConfig.url);
+
+    const map = mapInstanceRef.current;
+    satelliteLabelsLayerRef.current?.remove();
+    satelliteLabelsLayerRef.current = null;
+
+    if (activeTileKey === 'satellite') {
+      satelliteLabelsLayerRef.current = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+        {
+          attribution: 'Labels &copy; Esri',
+          maxZoom: 19,
+          opacity: 0.95,
+        }
+      ).addTo(map);
+    }
   }, [activeTileKey]);
 
   // Update Markers
@@ -190,6 +210,52 @@ export default function DisasterMap({
     );
   };
 
+  const handlePlaceSearch = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    if (!query || !mapInstanceRef.current) return;
+
+    setIsSearching(true);
+    setSearchMessage('');
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`
+      );
+      if (!response.ok) throw new Error('Place search failed');
+
+      const results = (await response.json()) as Array<{
+        lat: string;
+        lon: string;
+        display_name: string;
+      }>;
+      const result = results[0];
+      if (!result) {
+        setSearchMessage('Place not found');
+        return;
+      }
+
+      const location: [number, number] = [Number(result.lat), Number(result.lon)];
+      const map = mapInstanceRef.current;
+      searchMarkerRef.current?.remove();
+      searchMarkerRef.current = L.circleMarker(location, {
+        radius: 9,
+        color: '#38BDF8',
+        weight: 2,
+        fillColor: '#0EA5E9',
+        fillOpacity: 0.85,
+      }).addTo(map);
+      searchMarkerRef.current.bindTooltip(result.display_name, { direction: 'top', offset: [0, -8] }).openTooltip();
+      map.flyTo(location, 10, { duration: 1.2 });
+      setSearchMessage(result.display_name);
+    } catch (error) {
+      console.warn('Place search failed:', error);
+      setSearchMessage('Search unavailable');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   return (
     <div className="relative w-full h-full min-h-[400px] flex-1 bg-[#0B1420] overflow-hidden">
       {/* Map DOM Container */}
@@ -197,6 +263,33 @@ export default function DisasterMap({
 
       {/* Cybernetic radar scan bar */}
       <div className="map-scan" aria-hidden="true" />
+
+      {/* Place search */}
+      <form
+        onSubmit={handlePlaceSearch}
+        className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] flex w-[min(360px,calc(100%-2rem))] items-center gap-2 rounded-md border border-cyan-500/40 bg-[#0F1B29]/95 p-1.5 shadow-lg backdrop-blur-sm"
+      >
+        <Search className="ml-1 w-4 h-4 shrink-0 text-cyan-400" />
+        <input
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search a place..."
+          aria-label="Search for a place"
+          className="min-w-0 flex-1 bg-transparent px-1 py-1 text-xs text-white outline-none placeholder:text-slate-500"
+        />
+        <button
+          type="submit"
+          disabled={isSearching || !searchQuery.trim()}
+          className="rounded bg-cyan-600/80 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isSearching ? '...' : 'Find'}
+        </button>
+        {searchMessage && (
+          <span className="absolute left-0 top-full mt-1 max-w-full truncate rounded bg-[#0F1B29]/95 px-2 py-1 text-[10px] text-slate-300 shadow">
+            {searchMessage}
+          </span>
+        )}
+      </form>
 
       {/* Quick Viewport Navigation Toolbar */}
       <div className="absolute top-4 left-4 z-[400] flex flex-wrap gap-2">
