@@ -14,9 +14,9 @@ interface DisasterMapProps {
 
 const TILE_SERVERS = {
   dark: {
-    name: 'English Street Map',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri',
+    name: 'Black Operations Map',
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
   },
   voyager: {
     name: 'Clean Light',
@@ -39,7 +39,7 @@ export default function DisasterMap({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
-  const [activeTileKey, setActiveTileKey] = useState<keyof typeof TILE_SERVERS>('voyager');
+  const [activeTileKey, setActiveTileKey] = useState<keyof typeof TILE_SERVERS>('dark');
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
@@ -298,7 +298,7 @@ export default function DisasterMap({
               <span>Severe Storms</span>
             </div>
             <div className="flex items-center gap-1.5 text-slate-300">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#FF5D5D]"></span>
+              <span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]"></span>
               <span>Volcanoes</span>
             </div>
             <div className="flex items-center gap-1.5 text-slate-300">

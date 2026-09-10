@@ -3,7 +3,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Floods: '#3FC7C0',
   'Severe Storms': '#C9A8FF',
   Earthquakes: '#FFD166',
-  Volcanoes: '#FF5D5D',
+  Volcanoes: '#3B82F6',
   Landslides: '#E29578',
   Drought: '#DDA15E',
   'Sea and Lake Ice': '#90E0EF',

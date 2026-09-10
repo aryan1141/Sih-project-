@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Header from './components/Header';
 import DisasterMap from './components/DisasterMap';
 import FeedPanel from './components/FeedPanel';
@@ -13,7 +13,7 @@ import JudgePresentationModal from './components/JudgePresentationModal';
 import ShareTeamModal from './components/ShareTeamModal';
 import AIBriefingModal from './components/AIBriefingModal';
 import { DisasterEvent, EventsApiResponse } from './types';
-import { Map, ListFilter } from 'lucide-react';
+import { Bell, Map, ListFilter, X } from 'lucide-react';
 
 export default function App() {
   const [allEvents, setAllEvents] = useState<DisasterEvent[]>([]);
@@ -25,6 +25,9 @@ export default function App() {
   const [showJudgePitch, setShowJudgePitch] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showAIBriefing, setShowAIBriefing] = useState(false);
+  const [notificationEvent, setNotificationEvent] = useState<DisasterEvent | null>(null);
+  const knownEventIdsRef = useRef<Set<string> | null>(null);
+  const notificationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Loading and network state
   const [loading, setLoading] = useState(true);
@@ -48,6 +51,16 @@ export default function App() {
       const data: EventsApiResponse = await res.json();
 
       if (data.ok && Array.isArray(data.events)) {
+        const knownEventIds = knownEventIdsRef.current;
+        if (knownEventIds) {
+          const newEvent = data.events.find((event) => !knownEventIds.has(event.id));
+          if (newEvent) {
+            setNotificationEvent(newEvent);
+            if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
+            notificationTimeoutRef.current = setTimeout(() => setNotificationEvent(null), 8000);
+          }
+        }
+        knownEventIdsRef.current = new Set(data.events.map((event) => event.id));
         setAllEvents(data.events);
         setUpdatedAt(data.updatedAt || Date.now());
         setIsCached(Boolean(data.cached));
@@ -75,6 +88,12 @@ export default function App() {
     }, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [loadEvents]);
+
+  useEffect(() => {
+    return () => {
+      if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
+    };
+  }, []);
 
   // Compute categories & category counts
   const { categories, categoryCounts } = useMemo(() => {
@@ -123,6 +142,38 @@ export default function App() {
         isCached={isCached}
         totalEventsCount={allEvents.length}
       />
+
+      {notificationEvent && (
+        <div className="fixed top-20 right-4 z-[1000] w-[min(360px,calc(100vw-2rem))]" role="status" aria-live="polite">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedEvent(notificationEvent);
+              setNotificationEvent(null);
+            }}
+            className="w-full text-left bg-[#101D2B]/95 border border-amber-400/60 rounded-lg shadow-2xl backdrop-blur-md p-3 pr-9 hover:bg-[#16283A] transition"
+          >
+            <Bell className="absolute left-3 top-3.5 w-4 h-4 text-amber-300" />
+            <span className="block pl-7 text-[10px] font-mono font-bold tracking-widest text-amber-300 uppercase">
+              New incident detected
+            </span>
+            <span className="block pl-7 mt-1 text-sm font-semibold text-white leading-tight">
+              {notificationEvent.title}
+            </span>
+            <span className="block pl-7 mt-1 text-xs text-slate-400">
+              {notificationEvent.category} | Click to inspect on the map
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setNotificationEvent(null)}
+            aria-label="Dismiss incident notification"
+            className="absolute top-2 right-2 p-1 text-slate-400 hover:text-white transition"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Mobile Tab Switcher (Visible on small screens) */}
       <div className="flex md:hidden border-b border-[#22374A] bg-[#0F1B29] text-xs font-mono">
